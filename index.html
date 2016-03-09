@@ -6,25 +6,42 @@
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { font: 13px Helvetica, Arial; }
             form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-            form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+            form input { border: 0; padding: 10px; width: 40%; margin-right: .5%; }
             form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
-            #messages { list-style-type: none; margin: 0; padding: 0; }
-            #messages li { padding: 5px 10px; }
-            #messages li:nth-child(odd) { background: #eee; }
+            #users, #messages { list-style-type: none; margin: 0; padding: 0; }
+            #users li, #messages li { padding: 5px 10px; }
+            #users li:nth-child(odd), #messages li:nth-child(odd) { background: #eee; }
         </style>
         <script src="/socket.io/socket.io.js"></script>
         <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
         <script>
-            var socket = io();
             
             var user_name = prompt("Enter Your name");
             if(user_name != '') {
+                var socket = io();
+                socket.emit("join",{"room_name" : 'jit_mah'});
                 socket.emit('New User', user_name);
+
+                socket.on("New User Added", function(user_info){
+                    $("#messages").append($('<li>').text(user_info.user_name+" joined chat room"));
+                    $("#users").append($('<li id="'+user_info.user_name+'">').text(user_info.user_name));
+                });
+                
+                socket.on('Chat Message', function(msg_json) { 
+                    var sender_name = msg_json.user_name;
+                    if(sender_name == user_name) { 
+                        sender_name = 'You';
+                    }
+                    $("#messages").append($('<li>').text(sender_name+" : "+msg_json.msg));
+                });
+
+                socket.on("disconnect", function(user_info) {
+                    $("#messages").append($('<li>').text(user_info.user_name+" got disconnected"));
+                    $("#users #"+user_info.user_name).remove();
+                });
             }
             
-            socket.on("New User Added", function(user_name){
-                $("#messages").append($('<li>').text(user_name+" joined chat room"));
-            });
+            
             
             function sendMessage() {
                 var msg_input = $('#m');
@@ -36,28 +53,19 @@
                 }
                 return false;
             }
-
-            socket.on('Chat Message', function(msg_json) { 
-                var sender_name = msg_json.user_name;
-                if(sender_name == user_name) { 
-                    sender_name = 'You';
-                }
-                $("#messages").append($('<li>').text(sender_name+" : "+msg_json.msg));
-            });
-
-            socket.on("disconnect", function() {
-                $("#messages").append($('<li>').text("User got disconnected"));
-            });
         </script>
     </head>
     <body>
-        <ul id="messages"></ul>
-        <form>
-            <input id="m" autocomplete="off" /><button type="button" onclick="sendMessage();">Send</button>
-            <input type="text" id="nickname"/>
-        </form>
-        <script>
-
-        </script>
+        <div style="width:50%;height:500px;float:left;">
+            <ul id="users"></ul>
+        </div>
+        <div style="width:50%;height:500px;float:left;">
+            <ul id="messages"></ul>
+            <form>
+                <input id="m" autocomplete="off" /><button type="button" onclick="sendMessage();">Send</button>
+                <p>
+                    <label>Chat with</label>
+            </form>
+        </div>
     </body>
 </html>
